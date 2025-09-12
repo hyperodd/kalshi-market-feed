@@ -2,66 +2,61 @@ use anyhow::Result;
 use seda_sdk_rs::{elog, http_fetch, log, Process};
 use serde::{Deserialize, Serialize};
 
+// ============================================================================
+// DATA STRUCTURES
+// ============================================================================
+
 #[derive(Serialize, Deserialize)]
-struct PriceFeedResponse {
-    price: String,
+struct KalshiMarket {
+    yes_bid: u16,
 }
+
+#[derive(Serialize, Deserialize)]
+struct KalshiMarketResponse {
+    market: KalshiMarket,
+}
+
+// ============================================================================
+// EXECUTION PHASE - FETCHES LIVE DATA FROM KALSHI
+// ============================================================================
 
 /**
  * Executes the data request phase within the SEDA network.
- * This phase is responsible for fetching non-deterministic data (e.g., price of an asset pair)
- * from an external source such as a price feed API. The input specifies the asset pair to fetch.
+ * This phase fetches bid and ask prices for Kalshi markets based on a series ticker input.
  */
 pub fn execution_phase() -> Result<()> {
     // Retrieve the input parameters for the data request (DR).
-    // Expected to be in the format "symbolA-symbolB" (e.g., "BTC-USDT").
+    // Expected to be a series ticker (e.g., "KXGDP").
     let dr_inputs_raw = String::from_utf8(Process::get_inputs())?;
+    let series_ticker = dr_inputs_raw.trim();
 
-    // Log the asset pair being fetched as part of the Execution Standard Out.
-    log!("Fetching price for pair: {}", dr_inputs_raw);
+    log!("Fetching Kalshi market data for series: {}", series_ticker);
 
-    // Split the input string into symbolA and symbolB.
-    // Example: "ETH-USDC" will be split into "ETH" and "USDC".
-    let dr_inputs: Vec<&str> = dr_inputs_raw.split("-").collect();
-    let symbol_a = dr_inputs.first().expect("format should be tokenA-tokenB");
-    let symbol_b = dr_inputs.get(1).expect("format should be tokenA-tokenB");
-
-    let response = http_fetch(
-        format!(
-            "https://api.binance.com/api/v3/ticker/price?symbol={}{}",
-            symbol_a.to_uppercase(),
-            symbol_b.to_uppercase()
-        ),
+    // Step 1: Get series information
+    let series_response = http_fetch(
+                "https://api.elections.kalshi.com/trade-api/v2/markets/KXBOXING-25SEP13CALVTCRA-CALV",
         None,
     );
 
-    // Check if the HTTP request was successfully fulfilled.
-    if !response.is_ok() {
-        // Handle the case where the HTTP request failed or was rejected.
+
+    // Check if the series request was successful
+    if !series_response.is_ok() {
         elog!(
-            "HTTP Response was rejected: {} - {}",
-            response.status,
-            String::from_utf8(response.bytes)?
+            "Series HTTP Response was rejected: {} - {}",
+            series_response.status,
+            String::from_utf8(series_response.bytes)?
         );
-
-        // Report the failure to the SEDA network with an error code of 1.
-        Process::error("Error while fetching price feed".as_bytes());
-
+        Process::error("Error while fetching series information".as_bytes());
         return Ok(());
     }
 
-    // Parse the API response as defined earlier.
-    let data = serde_json::from_slice::<PriceFeedResponse>(&response.bytes)?;
+    // Parse series information
+    let series_data = serde_json::from_slice::<KalshiMarketResponse>(&series_response.bytes)?;
+    log!(
+        "Fetched Price (YES BID): {} cents",
+        series_data.market.yes_bid
+    );
 
-    // Convert to integer (and multiply by 1e6 to avoid losing precision).
-    let price: f32 = data.price.parse()?;
-    log!("Fetched price: {}", price);
-
-    let result = (price * 1000000f32) as u128;
-    log!("Reporting: {}", result);
-
-    // Report the successful result back to the SEDA network.
-    Process::success(&result.to_le_bytes());
-
+    Process::success(series_data.market.yes_bid.to_string().as_bytes());
     Ok(())
 }
