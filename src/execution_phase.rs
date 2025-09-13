@@ -28,13 +28,13 @@ pub fn execution_phase() -> Result<()> {
     // Retrieve the input parameters for the data request (DR).
     // Expected to be a series ticker (e.g., "KXGDP").
     let dr_inputs_raw = String::from_utf8(Process::get_inputs())?;
-    let series_ticker = dr_inputs_raw.trim();
+    let market_ticker = dr_inputs_raw.trim();
 
-    log!("Fetching Kalshi market data for series: {}", series_ticker);
+    log!("Fetching Kalshi market data for series: {}", market_ticker);
 
     // Step 1: Get series information
     let series_response = http_fetch(
-                "https://api.elections.kalshi.com/trade-api/v2/markets/KXBOXING-25SEP13CALVTCRA-CALV",
+                format!("https://api.elections.kalshi.com/trade-api/v2/markets/{}", market_ticker),
         None,
     );
 
