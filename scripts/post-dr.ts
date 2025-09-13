@@ -16,7 +16,7 @@ async function main() {
             method: 'none'
         },
         execProgramId: process.env.ORACLE_PROGRAM_ID,
-        execInputs: Buffer.from('eth-usdc'),
+        execInputs: Buffer.from("KXWTAMATCH-25SEP13BARJOV-BAR"), // <-- market ticker also tested and works with "KXPRESPERSON-28-JVAN" https://kalshi.com/markets/kxpresperson/pres-person/kxpresperson-28
         tallyInputs: Buffer.from([]),
         memo: Buffer.from(new Date().toISOString()),
     };

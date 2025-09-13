@@ -34,7 +34,7 @@ pub fn execution_phase() -> Result<()> {
 
     // Step 1: Get series information
     let series_response = http_fetch(
-                "https://api.elections.kalshi.com/trade-api/v2/markets/KXBOXING-25SEP13CALVTCRA-CALV",
+                "https://api.elections.kalshi.com/trade-api/v2/markets/KXWTAMATCH-25SEP13BARJOV-BAR",
         None,
     );
 
@@ -53,8 +53,8 @@ pub fn execution_phase() -> Result<()> {
     // Parse series information
     let series_data = serde_json::from_slice::<KalshiMarketResponse>(&series_response.bytes)?;
     log!(
-        "Fetched Price (YES BID): {} cents",
-        series_data.market.yes_bid
+        "Maket Data: {}",
+        serde_json::to_string_pretty(&series_data)?
     );
 
     Process::success(series_data.market.yes_bid.to_string().as_bytes());
